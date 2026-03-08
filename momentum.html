@@ -46,15 +46,37 @@
     <script src="https://unpkg.com/date-fns@2.30.0/dist/date-fns.min.js"></script>
     <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
     <script src="https://unpkg.com/recharts@2.10.3/umd/Recharts.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
 
     <script type="text/babel">
         const { useState, useEffect, useMemo, useRef } = React;
-        const { motion, AnimatePresence } = window.Motion;
+        
+        // Check for required dependencies
+        const missingDeps = [];
+        if (!window.React) missingDeps.push('React');
+        if (!window.ReactDOM) missingDeps.push('ReactDOM');
+        if (!window.dateFns) missingDeps.push('date-fns');
+        if (!window.Recharts) missingDeps.push('Recharts');
+        
+        if (missingDeps.length > 0) {
+            document.getElementById('root').innerHTML = `<div style="padding: 20px; color: white; font-family: sans-serif;">
+                <h1 style="color: #FF4444;">Missing Dependencies</h1>
+                <p>The following libraries failed to load:</p>
+                <ul style="color: #FF8888;">${missingDeps.map(d => `<li>${d}</li>`).join('')}</ul>
+                <p>Please check your internet connection and reload the page.</p>
+                <button onclick="location.reload();" style="background: white; color: black; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px;">Reload Page</button>
+            </div>`;
+            throw new Error('Missing dependencies: ' + missingDeps.join(', '));
+        }
+
+        // Robust check for Motion
+        const Motion = window.Motion || window.framerMotion || { motion: (props) => <div {...props} />, AnimatePresence: ({children}) => children };
+        const { motion, AnimatePresence } = Motion;
+
         const { 
             Radar, RadarChart, PolarGrid, PolarAngleAxis, 
             ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell 
         } = window.Recharts;
+        
         const { 
             format, subDays, isSameDay, startOfMonth, endOfMonth, 
             eachDayOfInterval, startOfWeek, endOfWeek, addMonths, 
@@ -68,7 +90,7 @@
             Check: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>,
             Flame: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>,
             Calendar: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>,
-            TrendingUp: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>< Maryland points="16 7 22 7 22 13"/></svg>,
+            TrendingUp: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>,
             Dumbbell: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6.5 6.5 11 11"/><path d="m11.8 5.8 4.2 4.2"/><path d="m5.8 11.8 4.2 4.2"/><path d="M11 3a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h2Z"/><path d="M3 11a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-2Z"/><path d="M16 21a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-2Z"/><path d="M21 16a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-2Z"/></svg>,
             Droplets: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 16.3c2.2 0 4-1.8 4-4 0-3.3-4-6.3-4-6.3S3 9 3 12.3c0 2.2 1.8 4 4 4z"/><path d="M17 16.3c2.2 0 4-1.8 4-4 0-3.3-4-6.3-4-6.3S13 9 13 12.3c0 2.2 1.8 4 4 4z"/></svg>,
             BookOpen: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>,
@@ -160,8 +182,8 @@
                             <div>
                                 <label className="text-[10px] uppercase tracking-widest text-zinc-500 mb-2 block">Type</label>
                                 <div className="grid grid-cols-2 gap-2">
-                                    {['boolean', 'counter', 'timer', 'options'].map((t) => (
-                                        <button key={t} onClick={() => { setType(t); setGoal(t === 'timer' ? 1800 : t === 'counter' ? 10 : 1); }} className={cn("py-2 rounded-xl text-xs capitalize transition-all", type === t ? "bg-white text-black" : "bg-white/5 text-zinc-400 hover:bg-white/10")}>{t}</button>
+                                    {['boolean', 'counter', 'timer', 'options'].map((t, i) => (
+                                        <button key={`type-${t}-${i}`} onClick={() => { setType(t); setGoal(t === 'timer' ? 1800 : t === 'counter' ? 10 : 1); }} className={cn("py-2 rounded-xl text-xs capitalize transition-all", type === t ? "bg-white text-black" : "bg-white/5 text-zinc-400 hover:bg-white/10")}>{t}</button>
                                     ))}
                                 </div>
                             </div>
@@ -169,7 +191,7 @@
                                 <div className="space-y-3">
                                     <label className="text-[10px] uppercase tracking-widest text-zinc-500 block">Options</label>
                                     {options.map((opt, idx) => (
-                                        <div key={idx} className="flex gap-2">
+                                        <div key={`opt-${idx}`} className="flex gap-2">
                                             <input type="text" value={opt.label} onChange={(e) => { const newOpts = [...options]; newOpts[idx].label = e.target.value; setOptions(newOpts); }} placeholder={`Option ${idx + 1}`} className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white text-xs focus:outline-none focus:border-white/20" />
                                             {options.length > 1 && <button onClick={() => setOptions(options.filter((_, i) => i !== idx))} className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg"><Icons.X /></button>}
                                         </div>
@@ -184,13 +206,13 @@
                             <div>
                                 <label className="text-[10px] uppercase tracking-widest text-zinc-500 mb-2 block">Icon & Color</label>
                                 <div className="flex flex-wrap gap-2 mb-4">
-                                    {Object.keys(ICON_MAP).map((i) => (
-                                        <button key={i} onClick={() => setIcon(i)} className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all", icon === i ? "bg-white text-black" : "bg-white/5 text-zinc-400 hover:bg-white/10")}>{ICON_MAP[i]}</button>
+                                    {Object.keys(ICON_MAP).map((i, idx) => (
+                                        <button key={`icon-${i}-${idx}`} onClick={() => setIcon(i)} className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all", icon === i ? "bg-white text-black" : "bg-white/5 text-zinc-400 hover:bg-white/10")}>{ICON_MAP[i]}</button>
                                     ))}
                                 </div>
                                 <div className="flex gap-2">
-                                    {COLORS.map((c) => (
-                                        <button key={c} onClick={() => setColor(c)} className={cn("w-8 h-8 rounded-full transition-all", color === c ? "ring-2 ring-white ring-offset-2 ring-offset-[#151619]" : "")} style={{ backgroundColor: c }} />
+                                    {COLORS.map((c, idx) => (
+                                        <button key={`color-${c}-${idx}`} onClick={() => setColor(c)} className={cn("w-8 h-8 rounded-full transition-all", color === c ? "ring-2 ring-white ring-offset-2 ring-offset-[#151619]" : "")} style={{ backgroundColor: c }} />
                                     ))}
                                 </div>
                             </div>
@@ -232,7 +254,7 @@
                 <div className="space-y-4">
                     <div className="grid grid-cols-4 gap-2">
                         {['Total', 'Avg', 'Max', 'Done'].map((label, i) => (
-                            <div key={label} className="bg-[#151619] rounded-2xl p-3 border border-white/5">
+                            <div key={`stat-${label}-${i}`} className="bg-[#151619] rounded-2xl p-3 border border-white/5">
                                 <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-1">{label}</div>
                                 <div className={cn("text-sm font-bold", label === 'Done' ? "text-green-500" : "text-white")}>
                                     {label === 'Total' ? monthData.total : label === 'Avg' ? monthData.avg : label === 'Max' ? monthData.max : `${monthData.completed}/${monthData.daysInMonth}`}
@@ -264,7 +286,7 @@
                                 const isDayToday = isToday(day);
                                 const isCompleted = isTracked && (value >= tracker.goal || value === 0 || tracker.type === 'boolean');
                                 return (
-                                    <button key={dateStr} onClick={() => { setEditingDay(dateStr); setEditValue(value.toString()); }} className={cn("aspect-square rounded-lg flex flex-col items-center justify-center relative transition-all", !isCurrentMonth && "opacity-20", isDayToday && "ring-1 ring-white/20")} style={{ backgroundColor: getTrackerColor(tracker, value, isTracked), border: isCompleted ? `1px solid ${tracker.color}40` : '1px solid transparent' }}>
+                                    <button key={`cal-${tracker.id}-${dateStr}-${i}`} onClick={() => { setEditingDay(dateStr); setEditValue(value.toString()); }} className={cn("aspect-square rounded-lg flex flex-col items-center justify-center relative transition-all", !isCurrentMonth && "opacity-20", isDayToday && "ring-1 ring-white/20")} style={{ backgroundColor: getTrackerColor(tracker, value, isTracked), border: isCompleted ? `1px solid ${tracker.color}40` : '1px solid transparent' }}>
                                         <span className={cn("text-[10px] font-medium", isCompleted ? "text-white" : "text-zinc-500")}>{format(day, 'd')}</span>
                                     </button>
                                 );
@@ -311,8 +333,8 @@
                         </div>
                     </div>
                     <div className="flex flex-col gap-2">
-                        {trackers.map(tracker => (
-                            <div key={`${keyPrefix}-${tracker.id}`} className="bg-[#151619] rounded-xl p-3 border border-white/5 shadow-lg overflow-hidden">
+                        {trackers.map((tracker, trackerIdx) => (
+                            <div key={`${keyPrefix}-${tracker.id}-${trackerIdx}`} className="bg-[#151619] rounded-xl p-3 border border-white/5 shadow-lg overflow-hidden">
                                 <div className="flex items-center justify-between mb-2">
                                     <button onClick={() => onEditTracker(tracker)} className="flex items-center gap-2 hover:bg-white/5 p-0.5 rounded-lg transition-all group">
                                         <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${tracker.color}20`, color: tracker.color }}>
@@ -322,14 +344,14 @@
                                     </button>
                                 </div>
                                 <div className="grid grid-cols-7 gap-1">
-                                    {days.map(day => {
+                                    {days.map((day, dayIdx) => {
                                         const dateStr = format(day, 'yyyy-MM-dd');
                                         const isTracked = dateStr in tracker.history;
                                         const val = tracker.history[dateStr] ?? 0;
                                         const isCompleted = isTracked && (val >= tracker.goal || val === 0 || tracker.type === 'boolean');
                                         const isDayToday = isToday(day);
                                         return (
-                                            <button key={dateStr} onClick={() => onDayClick(tracker, dateStr, val)} className={cn("aspect-square rounded-md transition-all flex flex-col items-center justify-center relative", isDayToday ? "ring-2 ring-white/40 shadow-[0_0_10px_rgba(255,255,255,0.1)]" : "hover:ring-1 hover:ring-white/10")} style={{ backgroundColor: getTrackerColor(tracker, val, isTracked) }}>
+                                            <button key={`${keyPrefix}-${tracker.id}-${dateStr}-${dayIdx}`} onClick={() => onDayClick(tracker, dateStr, val)} className={cn("aspect-square rounded-md transition-all flex flex-col items-center justify-center relative", isDayToday ? "ring-2 ring-white/40 shadow-[0_0_10px_rgba(255,255,255,0.1)]" : "hover:ring-1 hover:ring-white/10")} style={{ backgroundColor: getTrackerColor(tracker, val, isTracked) }}>
                                                 <div className={cn("text-[5px] font-bold uppercase opacity-50", isCompleted ? "text-black" : "text-zinc-400")}>{format(day, 'EEE').charAt(0)}</div>
                                                 <span className={cn("text-[7px] font-bold", isCompleted ? "text-black/40" : "text-zinc-600")}>{format(day, 'd')}</span>
                                                 {val > 0 && <span className={cn("text-[8px] font-black leading-none mt-0.5", isCompleted ? "text-black" : "text-white")}>{tracker.type === 'options' && tracker.options ? tracker.options.find(o => o.value === val)?.label.charAt(0).toUpperCase() : (val % 1 === 0 ? val : val.toFixed(1))}</span>}
@@ -347,7 +369,15 @@
         // --- Main App ---
 
         function App() {
-            const [trackers, setTrackers] = useState(() => { const saved = localStorage.getItem('momentum_trackers'); return saved ? JSON.parse(saved) : INITIAL_TRACKERS; });
+            const [trackers, setTrackers] = useState(() => { 
+                try {
+                    const saved = localStorage.getItem('momentum_trackers'); 
+                    return saved ? JSON.parse(saved) : INITIAL_TRACKERS; 
+                } catch (e) {
+                    console.error("Failed to load trackers from localStorage", e);
+                    return INITIAL_TRACKERS;
+                }
+            });
             const [gasUrl, setGasUrl] = useState(() => localStorage.getItem('momentum_gas_url') || '');
             const [isAddModalOpen, setIsAddModalOpen] = useState(false);
             const [editingTracker, setEditingTracker] = useState(null);
@@ -395,11 +425,12 @@
             };
 
             const todayStr = format(new Date(), 'yyyy-MM-dd');
-            const statsData = useMemo(() => trackers.map(t => {
+            const statsData = useMemo(() => trackers.map((t, i) => {
                 const isTracked = todayStr in t.history;
                 const val = t.history[todayStr] ?? 0;
                 const isCompleted = isTracked && (val >= t.goal || val === 0 || t.type === 'boolean');
-                return { subject: t.name, A: isCompleted ? 100 : Math.min((val / t.goal) * 100, 100), fullMark: 100, color: t.color };
+                // Use a unique subject by appending ID to avoid duplicate keys in Recharts
+                return { subject: `${t.name}#${t.id}`, displayName: t.name, A: isCompleted ? 100 : Math.min((val / t.goal) * 100, 100), fullMark: 100, color: t.color, id: t.id };
             }), [trackers, todayStr]);
 
             return (
@@ -440,7 +471,7 @@
                                             <ResponsiveContainer width="100%" height="100%">
                                                 <RadarChart cx="50%" cy="50%" outerRadius="80%" data={statsData}>
                                                     <PolarGrid stroke="rgba(255,255,255,0.05)" />
-                                                    <PolarAngleAxis dataKey="subject" tick={{ fill: '#71717a', fontSize: 10, fontWeight: 500 }} />
+                                                    <PolarAngleAxis dataKey="subject" tickFormatter={(val) => val.split('#')[0]} tick={{ fill: '#71717a', fontSize: 10, fontWeight: 500 }} />
                                                     <Radar name="Progress" dataKey="A" stroke="#fff" fill="#fff" fillOpacity={0.05} />
                                                 </RadarChart>
                                             </ResponsiveContainer>
@@ -451,8 +482,8 @@
                             ) : (
                                 <motion.div key="calendar" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
                                     <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                                        {trackers.map(t => (
-                                            <button key={t.id} onClick={() => setSelectedTrackerId(t.id)} className={cn("px-4 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all border", selectedTrackerId === t.id ? "bg-white text-black border-white" : "bg-white/5 text-zinc-500 border-white/5 hover:bg-white/10")}>{t.name}</button>
+                                        {trackers.map((t, i) => (
+                                            <button key={`tab-t-${t.id}-${i}`} onClick={() => setSelectedTrackerId(t.id)} className={cn("px-4 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all border", selectedTrackerId === t.id ? "bg-white text-black border-white" : "bg-white/5 text-zinc-500 border-white/5 hover:bg-white/10")}>{t.name}</button>
                                         ))}
                                     </div>
                                     {selectedTrackerId ? <MonthlyCalendar tracker={trackers.find(t => t.id === selectedTrackerId)} currentMonth={currentMonth} onMonthChange={setCurrentMonth} onUpdateHistory={updateTrackerHistory} /> : <div className="bg-[#151619] rounded-3xl p-12 border border-white/5 text-center"><Icons.Calendar /><p className="text-zinc-500 text-sm mt-4">Select a habit to view monthly history</p></div>}
@@ -498,8 +529,18 @@
             );
         }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        try {
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(<App />);
+        } catch (e) {
+            console.error("Failed to render App", e);
+            document.getElementById('root').innerHTML = `<div style="padding: 20px; color: white; font-family: sans-serif;">
+                <h1 style="color: #FF4444;">Error Loading App</h1>
+                <p>Something went wrong while starting the application.</p>
+                <pre style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; font-size: 12px; overflow: auto;">${e.message}</pre>
+                <button onclick="localStorage.clear(); location.reload();" style="background: white; color: black; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px;">Reset Data & Reload</button>
+            </div>`;
+        }
     </script>
 </body>
 </html>
