@@ -40,30 +40,43 @@
     <div id="root"></div>
 
     <!-- Dependencies -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/date-fns@2.30.0/dist/date-fns.min.js"></script>
-    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
-    <script src="https://unpkg.com/recharts@2.10.3/umd/Recharts.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.5/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/date-fns/2.30.0/date_fns.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/framer-motion@10.16.4/dist/framer-motion.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/recharts@2.10.3/umd/Recharts.min.js"></script>
 
     <script type="text/babel">
         const { useState, useEffect, useMemo, useRef } = React;
         
         // Check for required dependencies
+        const dateFns = window.dateFns || window.date_fns;
+        const Recharts = window.Recharts;
+        console.log('Dependencies check:', { 
+            React: !!window.React, 
+            ReactDOM: !!window.ReactDOM, 
+            dateFns: !!dateFns, 
+            Recharts: !!Recharts,
+            Motion: !!(window.Motion || window.framerMotion)
+        });
+        
         const missingDeps = [];
         if (!window.React) missingDeps.push('React');
         if (!window.ReactDOM) missingDeps.push('ReactDOM');
-        if (!window.dateFns) missingDeps.push('date-fns');
-        if (!window.Recharts) missingDeps.push('Recharts');
+        if (!dateFns) missingDeps.push('date-fns');
+        if (!Recharts) missingDeps.push('Recharts');
         
         if (missingDeps.length > 0) {
-            document.getElementById('root').innerHTML = `<div style="padding: 20px; color: white; font-family: sans-serif;">
-                <h1 style="color: #FF4444;">Missing Dependencies</h1>
-                <p>The following libraries failed to load:</p>
-                <ul style="color: #FF8888;">${missingDeps.map(d => `<li>${d}</li>`).join('')}</ul>
-                <p>Please check your internet connection and reload the page.</p>
-                <button onclick="location.reload();" style="background: white; color: black; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px;">Reload Page</button>
+            document.getElementById('root').innerHTML = `<div style="padding: 40px; color: white; font-family: sans-serif; text-align: center; background: #0A0B0D; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <h1 style="color: #FF4444; font-size: 24px; margin-bottom: 16px;">Missing Dependencies</h1>
+                <p style="opacity: 0.8; margin-bottom: 8px;">The following libraries failed to load:</p>
+                <ul style="color: #FF8888; list-style: none; padding: 0; margin-bottom: 24px;">${missingDeps.map(d => `<li style="font-weight: bold; font-size: 18px;">${d}</li>`).join('')}</ul>
+                <p style="opacity: 0.6; font-size: 14px; max-width: 300px; margin-bottom: 32px;">This usually happens due to a poor internet connection or CDN issues. Please try reloading.</p>
+                <div style="display: flex; gap: 12px;">
+                    <button onclick="location.reload();" style="background: white; color: black; border: none; padding: 12px 24px; border-radius: 12px; cursor: pointer; font-weight: bold; transition: transform 0.2s active:scale-95;">Reload Page</button>
+                    <button onclick="if(confirm('Reset all data? This might fix loading issues if data is corrupted.')){ localStorage.clear(); location.reload(); }" style="background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 12px 24px; border-radius: 12px; cursor: pointer; font-weight: bold;">Reset App</button>
+                </div>
             </div>`;
             throw new Error('Missing dependencies: ' + missingDeps.join(', '));
         }
@@ -75,13 +88,13 @@
         const { 
             Radar, RadarChart, PolarGrid, PolarAngleAxis, 
             ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell 
-        } = window.Recharts;
+        } = Recharts;
         
         const { 
             format, subDays, isSameDay, startOfMonth, endOfMonth, 
             eachDayOfInterval, startOfWeek, endOfWeek, addMonths, 
             subMonths, isSameMonth, isToday 
-        } = window.dateFns;
+        } = dateFns;
 
         // --- Icons (SVG Paths) ---
         const Icons = {
@@ -355,7 +368,7 @@
                                         const isCompleted = isTracked && (val >= tracker.goal || val === 0 || tracker.type === 'boolean');
                                         const isDayToday = isToday(day);
                                         return (
-                                            <button key={`${keyPrefix}-${tracker.id}-${dateStr}-${dayIdx}`} onClick={() => onDayClick(tracker, dateStr, val)} className={cn("aspect-square rounded-md transition-all flex flex-col items-center justify-center relative", isDayToday ? "ring-2 ring-white/40 shadow-[0_0_10px_rgba(255,255,255,0.1)]" : "hover:ring-1 hover:ring-white/10")} style={{ backgroundColor: getTrackerColor(tracker, val, isTracked) }}>
+                                            <button key={`${keyPrefix}-${tracker.id}-${trackerIdx}-${dateStr}-${dayIdx}`} onClick={() => onDayClick(tracker, dateStr, val)} className={cn("aspect-square rounded-md transition-all flex flex-col items-center justify-center relative", isDayToday ? "ring-2 ring-white/40 shadow-[0_0_10px_rgba(255,255,255,0.1)]" : "hover:ring-1 hover:ring-white/10")} style={{ backgroundColor: getTrackerColor(tracker, val, isTracked) }}>
                                                 <div className={cn("text-[5px] font-bold uppercase opacity-50", isCompleted ? "text-black" : "text-zinc-400")}>{format(day, 'EEE').charAt(0)}</div>
                                                 <span className={cn("text-[7px] font-bold", isCompleted ? "text-black/40" : "text-zinc-600")}>{format(day, 'd')}</span>
                                                 {val > 0 && <span className={cn("text-[8px] font-black leading-none mt-0.5", isCompleted ? "text-black" : "text-white")}>{tracker.type === 'options' && tracker.options ? tracker.options.find(o => o.value === val)?.label.charAt(0).toUpperCase() : (val % 1 === 0 ? val : val.toFixed(1))}</span>}
@@ -376,7 +389,12 @@
             const [trackers, setTrackers] = useState(() => { 
                 try {
                     const saved = localStorage.getItem('momentum_trackers'); 
-                    return saved ? JSON.parse(saved) : INITIAL_TRACKERS; 
+                    const parsed = saved ? JSON.parse(saved) : INITIAL_TRACKERS;
+                    // Ensure every tracker has a unique ID to prevent key collisions
+                    return parsed.map((t, i) => ({ 
+                        ...t, 
+                        id: t.id || `t-${i}-${Math.random().toString(36).substr(2, 5)}` 
+                    }));
                 } catch (e) {
                     console.error("Failed to load trackers from localStorage", e);
                     return INITIAL_TRACKERS;
@@ -496,8 +514,15 @@
                 const isTracked = todayStr in t.history;
                 const val = t.history[todayStr] ?? 0;
                 const isCompleted = isTracked && (val >= t.goal || val === 0 || t.type === 'boolean');
-                // Use a unique subject by appending ID to avoid duplicate keys in Recharts
-                return { subject: `${t.name}#${t.id}`, displayName: t.name, A: isCompleted ? 100 : Math.min((val / t.goal) * 100, 100), fullMark: 100, color: t.color, id: t.id };
+                // Use a unique subject by appending ID and index to avoid duplicate keys in Recharts
+                return { 
+                    subject: `${t.name}#${t.id}#${i}`, 
+                    displayName: t.name, 
+                    A: isCompleted ? 100 : Math.min((val / t.goal) * 100, 100), 
+                    fullMark: 100, 
+                    color: t.color, 
+                    id: t.id 
+                };
             }), [trackers, todayStr]);
 
             return (
@@ -575,8 +600,8 @@
                                                         itemStyle={{ color: '#fff' }}
                                                     />
                                                     <Bar dataKey="current" radius={[6, 6, 0, 0]} barSize={32}>
-                                                        {trackers.map((entry) => (
-                                                            <Cell key={`cell-${entry.id}`} fill={entry.color} />
+                                                        {trackers.map((entry, i) => (
+                                                            <Cell key={`cell-${entry.id}-${i}`} fill={entry.color} />
                                                         ))}
                                                     </Bar>
                                                 </BarChart>
