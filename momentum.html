@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Momentum Habit Tracker</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0A0B0D;
+            color: white;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        /* Hide scrollbar for IE, Edge and Firefox */
+        .scrollbar-hide {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .animate-pulse-soft {
+            animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <!-- Dependencies -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/date-fns@2.30.0/dist/date-fns.min.js"></script>
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+    <script src="https://unpkg.com/recharts@2.10.3/umd/Recharts.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
+        const { motion, AnimatePresence } = window.Motion;
+        const { 
+            Radar, RadarChart, PolarGrid, PolarAngleAxis, 
+            ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell 
+        } = window.Recharts;
+        const { 
+            format, subDays, isSameDay, startOfMonth, endOfMonth, 
+            eachDayOfInterval, startOfWeek, endOfWeek, addMonths, 
+            subMonths, isSameMonth, isToday 
+        } = window.dateFns;
+
+        // --- Icons (SVG Paths) ---
+        const Icons = {
+            Plus: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,
+            Settings: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>,
+            Check: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>,
+            Flame: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>,
+            Calendar: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>,
+            TrendingUp: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>< Maryland points="16 7 22 7 22 13"/></svg>,
+            Dumbbell: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6.5 6.5 11 11"/><path d="m11.8 5.8 4.2 4.2"/><path d="m5.8 11.8 4.2 4.2"/><path d="M11 3a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h2Z"/><path d="M3 11a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-2Z"/><path d="M16 21a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-2Z"/><path d="M21 16a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-2Z"/></svg>,
+            Droplets: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 16.3c2.2 0 4-1.8 4-4 0-3.3-4-6.3-4-6.3S3 9 3 12.3c0 2.2 1.8 4 4 4z"/><path d="M17 16.3c2.2 0 4-1.8 4-4 0-3.3-4-6.3-4-6.3S13 9 13 12.3c0 2.2 1.8 4 4 4z"/></svg>,
+            BookOpen: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>,
+            Clock: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+            Zap: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+            ChevronRight: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>,
+            ChevronLeft: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>,
+            X: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>,
+            RotateCcw: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>,
+            Cloud: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.5 19c3.037 0 5.5-2.463 5.5-5.5 0-2.97-2.354-5.382-5.29-5.49A7.001 7.001 0 0 0 4 10.5c0 .34.025.67.073 1A4.5 4.5 0 0 0 5.5 20h12"/><path d="M12 13v6"/><path d="m9 16 3 3 3-3"/></svg>,
+            AlertCircle: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>,
+        };
+
+        // --- Utils ---
+        function cn(...inputs) {
+            return inputs.filter(Boolean).join(' ');
+        }
+
+        function getTrackerColor(tracker, value, isTracked) {
+            if (!isTracked) return 'rgba(255,255,255,0.03)';
+            if (tracker.type === 'options' && tracker.options) {
+                const optionIndex = tracker.options.findIndex(o => o.value === value);
+                if (optionIndex !== -1) {
+                    const opacities = ['FF', 'CC', '99', '77', '55'];
+                    const opacity = opacities[optionIndex % opacities.length];
+                    return `${tracker.color}${opacity}`;
+                }
+                return tracker.color;
+            }
+            const isCompleted = value >= tracker.goal || value === 0 || tracker.type === 'boolean';
+            return isCompleted ? tracker.color : `${tracker.color}40`;
+        }
+
+        const ICON_MAP = {
+            'pushup': <Icons.Dumbbell />,
+            'water': <Icons.Droplets />,
+            'read': <Icons.BookOpen />,
+            'plan': <Icons.Calendar />,
+            'focus': <Icons.Zap />,
+            'time': <Icons.Clock />,
+        };
+
+        const COLORS = ['#F27D26', '#00FF00', '#FF4444', '#3B82F6', '#A855F7', '#EC4899'];
+
+        const INITIAL_TRACKERS = [
+            { id: '1', name: 'Pushups', icon: 'pushup', type: 'counter', goal: 20, current: 12, color: '#A855F7', streak: 5, history: {} },
+            { id: '2', name: 'Drink Water', icon: 'water', type: 'boolean', goal: 1, current: 1, color: '#3B82F6', streak: 12, history: {} },
+            { id: '3', name: 'Reading', icon: 'read', type: 'timer', goal: 600, current: 0, color: '#EC4899', streak: 3, history: {} },
+        ];
+
+        // --- Components ---
+
+        const TrackerModal = ({ isOpen, onClose, onSave, initialData, isEdit = false }) => {
+            const [name, setName] = useState(initialData?.name || '');
+            const [type, setType] = useState(initialData?.type || 'boolean');
+            const [goal, setGoal] = useState(initialData?.goal || 1);
+            const [icon, setIcon] = useState(initialData?.icon || 'pushup');
+            const [color, setColor] = useState(initialData?.color || COLORS[0]);
+            const [options, setOptions] = useState(initialData?.options || [{ label: 'Option 1', value: 1 }, { label: 'Option 2', value: 2 }]);
+
+            useEffect(() => {
+                if (isOpen && initialData) {
+                    setName(initialData.name || '');
+                    setType(initialData.type || 'boolean');
+                    setGoal(initialData.goal || 1);
+                    setIcon(initialData.icon || 'pushup');
+                    setColor(initialData.color || COLORS[0]);
+                    setOptions(initialData.options || [{ label: 'Option 1', value: 1 }, { label: 'Option 2', value: 2 }]);
+                } else if (isOpen && !isEdit) {
+                    setName(''); setType('boolean'); setGoal(1); setIcon('pushup'); setColor(COLORS[0]);
+                    setOptions([{ label: 'Option 1', value: 1 }, { label: 'Option 2', value: 2 }]);
+                }
+            }, [isOpen, initialData, isEdit]);
+
+            if (!isOpen) return null;
+
+            return (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+                    <motion.div initial={{ y: 100 }} animate={{ y: 0 }} exit={{ y: 100 }} className="bg-[#151619] w-full max-w-md rounded-3xl p-6 border border-white/10">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-semibold text-white">{isEdit ? 'Edit Tracker' : 'New Tracker'}</h2>
+                            <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full text-zinc-400"><Icons.X /></button>
+                        </div>
+                        <div className="space-y-6 max-h-[70vh] overflow-y-auto scrollbar-hide">
+                            <div>
+                                <label className="text-[10px] uppercase tracking-widest text-zinc-500 mb-2 block">Name</label>
+                                <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Morning Run" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-white/20" />
+                            </div>
+                            <div>
+                                <label className="text-[10px] uppercase tracking-widest text-zinc-500 mb-2 block">Type</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {['boolean', 'counter', 'timer', 'options'].map((t) => (
+                                        <button key={t} onClick={() => { setType(t); setGoal(t === 'timer' ? 1800 : t === 'counter' ? 10 : 1); }} className={cn("py-2 rounded-xl text-xs capitalize transition-all", type === t ? "bg-white text-black" : "bg-white/5 text-zinc-400 hover:bg-white/10")}>{t}</button>
+                                    ))}
+                                </div>
+                            </div>
+                            {type === 'options' && (
+                                <div className="space-y-3">
+                                    <label className="text-[10px] uppercase tracking-widest text-zinc-500 block">Options</label>
+                                    {options.map((opt, idx) => (
+                                        <div key={idx} className="flex gap-2">
+                                            <input type="text" value={opt.label} onChange={(e) => { const newOpts = [...options]; newOpts[idx].label = e.target.value; setOptions(newOpts); }} placeholder={`Option ${idx + 1}`} className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white text-xs focus:outline-none focus:border-white/20" />
+                                            {options.length > 1 && <button onClick={() => setOptions(options.filter((_, i) => i !== idx))} className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg"><Icons.X /></button>}
+                                        </div>
+                                    ))}
+                                    <button onClick={() => setOptions([...options, { label: '', value: options.length + 1 }])} className="w-full py-2 border border-dashed border-white/10 rounded-xl text-[10px] text-zinc-500 hover:text-white hover:border-white/20 transition-all">+ Add Option</button>
+                                </div>
+                            )}
+                            <div>
+                                <label className="text-[10px] uppercase tracking-widest text-zinc-500 mb-2 block">Goal</label>
+                                <input type="number" value={goal} onChange={(e) => setGoal(Number(e.target.value))} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-white/20" />
+                            </div>
+                            <div>
+                                <label className="text-[10px] uppercase tracking-widest text-zinc-500 mb-2 block">Icon & Color</label>
+                                <div className="flex flex-wrap gap-2 mb-4">
+                                    {Object.keys(ICON_MAP).map((i) => (
+                                        <button key={i} onClick={() => setIcon(i)} className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all", icon === i ? "bg-white text-black" : "bg-white/5 text-zinc-400 hover:bg-white/10")}>{ICON_MAP[i]}</button>
+                                    ))}
+                                </div>
+                                <div className="flex gap-2">
+                                    {COLORS.map((c) => (
+                                        <button key={c} onClick={() => setColor(c)} className={cn("w-8 h-8 rounded-full transition-all", color === c ? "ring-2 ring-white ring-offset-2 ring-offset-[#151619]" : "")} style={{ backgroundColor: c }} />
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="flex gap-3">
+                                {isEdit && <button onClick={() => { if (confirm('Delete this tracker?')) { onSave({ ...initialData, name: 'DELETE_TRACKER' }); onClose(); } }} className="flex-1 bg-red-500/10 text-red-500 font-semibold py-4 rounded-2xl hover:bg-red-500/20 transition-all">Delete</button>}
+                                <button onClick={() => { onSave({ name, type, goal, icon, color, current: initialData?.current || 0, options: type === 'options' ? options : undefined }); onClose(); }} disabled={!name} className="flex-[2] bg-white text-black font-semibold py-4 rounded-2xl disabled:opacity-50 hover:bg-zinc-200 transition-all">{isEdit ? 'Save Changes' : 'Create Tracker'}</button>
+                            </div>
+                        </div>
+                    </motion.div>
+                </motion.div>
+            );
+        };
+
+        const MonthlyCalendar = ({ tracker, currentMonth, onMonthChange, onUpdateHistory }) => {
+            const [editingDay, setEditingDay] = useState(null);
+            const [editValue, setEditValue] = useState('');
+
+            const monthStart = startOfMonth(currentMonth);
+            const monthEnd = endOfMonth(monthStart);
+            const startDate = startOfWeek(monthStart, { weekStartsOn: 1 });
+            const endDate = endOfWeek(monthEnd, { weekStartsOn: 1 });
+            const calendarDays = eachDayOfInterval({ start: startDate, end: endDate });
+
+            const monthData = useMemo(() => {
+                const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+                let total = 0, count = 0, max = 0, completed = 0;
+                days.forEach(day => {
+                    const dateStr = format(day, 'yyyy-MM-dd');
+                    const val = tracker.history[dateStr] || 0;
+                    if (val > 0) { total += val; count++; if (val > max) max = val; }
+                    if (val >= tracker.goal) completed++;
+                });
+                return { total: total.toFixed(1), avg: count > 0 ? (total / count).toFixed(1) : 0, max: max.toFixed(1), completed, daysInMonth: days.length };
+            }, [tracker.history, monthStart, monthEnd, tracker.goal]);
+
+            const saveEdit = () => { if (editingDay) { onUpdateHistory(tracker.id, editingDay, parseFloat(editValue) || 0); setEditingDay(null); } };
+
+            return (
+                <div className="space-y-4">
+                    <div className="grid grid-cols-4 gap-2">
+                        {['Total', 'Avg', 'Max', 'Done'].map((label, i) => (
+                            <div key={label} className="bg-[#151619] rounded-2xl p-3 border border-white/5">
+                                <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-1">{label}</div>
+                                <div className={cn("text-sm font-bold", label === 'Done' ? "text-green-500" : "text-white")}>
+                                    {label === 'Total' ? monthData.total : label === 'Avg' ? monthData.avg : label === 'Max' ? monthData.max : `${monthData.completed}/${monthData.daysInMonth}`}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="bg-[#151619] rounded-3xl p-6 border border-white/5">
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${tracker.color}20`, color: tracker.color }}>{ICON_MAP[tracker.icon]}</div>
+                                <div><h3 className="text-sm font-bold text-white">{tracker.name}</h3><p className="text-[10px] text-zinc-500 uppercase tracking-widest">Monthly History</p></div>
+                            </div>
+                            <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
+                                <button onClick={() => onMonthChange(subMonths(currentMonth, 1))} className="p-1.5 hover:bg-white/10 rounded text-zinc-400"><Icons.ChevronLeft /></button>
+                                <span className="text-[10px] font-mono text-white px-3 min-w-[110px] text-center uppercase tracking-widest">{format(currentMonth, 'MMMM yyyy')}</span>
+                                <button onClick={() => onMonthChange(addMonths(currentMonth, 1))} className="p-1.5 hover:bg-white/10 rounded text-zinc-400"><Icons.ChevronRight /></button>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-7 gap-1 mb-2">
+                            {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, i) => <div key={i} className="text-[10px] text-zinc-600 font-bold text-center py-1">{day}</div>)}
+                        </div>
+                        <div className="grid grid-cols-7 gap-1">
+                            {calendarDays.map((day, i) => {
+                                const dateStr = format(day, 'yyyy-MM-dd');
+                                const isTracked = dateStr in tracker.history;
+                                const value = tracker.history[dateStr] ?? 0;
+                                const isCurrentMonth = isSameMonth(day, monthStart);
+                                const isDayToday = isToday(day);
+                                const isCompleted = isTracked && (value >= tracker.goal || value === 0 || tracker.type === 'boolean');
+                                return (
+                                    <button key={dateStr} onClick={() => { setEditingDay(dateStr); setEditValue(value.toString()); }} className={cn("aspect-square rounded-lg flex flex-col items-center justify-center relative transition-all", !isCurrentMonth && "opacity-20", isDayToday && "ring-1 ring-white/20")} style={{ backgroundColor: getTrackerColor(tracker, value, isTracked), border: isCompleted ? `1px solid ${tracker.color}40` : '1px solid transparent' }}>
+                                        <span className={cn("text-[10px] font-medium", isCompleted ? "text-white" : "text-zinc-500")}>{format(day, 'd')}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                    <AnimatePresence>
+                        {editingDay && (
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-[#151619] w-full max-w-xs rounded-3xl p-6 border border-white/10 shadow-2xl">
+                                    <h3 className="text-sm font-semibold mb-4 text-white">Edit {format(new Date(editingDay), 'MMM d, yyyy')}</h3>
+                                    <div className="space-y-4">
+                                        <input type="number" step="0.1" autoFocus value={editValue} onChange={(e) => setEditValue(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && saveEdit()} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-white/20" />
+                                        <div className="flex gap-2">
+                                            <button onClick={() => setEditingDay(null)} className="flex-1 py-3 rounded-xl bg-white/5 text-zinc-400 text-xs font-semibold">Cancel</button>
+                                            <button onClick={saveEdit} className="flex-1 py-3 rounded-xl bg-white text-black text-xs font-semibold">Save</button>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+            );
+        };
+
+        const MonthlyMatrix = ({ trackers, currentMonth, onDayClick, onEditTracker, onMonthChange, keyPrefix = 'matrix' }) => {
+            const days = useMemo(() => {
+                if (keyPrefix === 'today' && isSameMonth(currentMonth, new Date())) {
+                    return eachDayOfInterval({ start: subDays(new Date(), 27), end: new Date() });
+                }
+                const monthEnd = endOfMonth(currentMonth);
+                return eachDayOfInterval({ start: subDays(monthEnd, 27), end: monthEnd });
+            }, [currentMonth, keyPrefix]);
+
+            return (
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between px-2">
+                        <h3 className="text-xs font-semibold flex items-center gap-2 text-zinc-400"><Icons.TrendingUp /> 4-Week Momentum</h3>
+                        <div className="flex items-center gap-1 bg-white/5 rounded-lg p-0.5">
+                            <button onClick={() => onMonthChange(addMonths(currentMonth, -1))} className="p-1 hover:bg-white/10 rounded text-zinc-500"><Icons.ChevronLeft /></button>
+                            <span className="text-[9px] font-mono text-zinc-300 px-2 min-w-[80px] text-center uppercase tracking-widest">{format(currentMonth, 'MMM yyyy')}</span>
+                            <button onClick={() => onMonthChange(addMonths(currentMonth, 1))} className="p-1 hover:bg-white/10 rounded text-zinc-500"><Icons.ChevronRight /></button>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        {trackers.map(tracker => (
+                            <div key={`${keyPrefix}-${tracker.id}`} className="bg-[#151619] rounded-xl p-3 border border-white/5 shadow-lg overflow-hidden">
+                                <div className="flex items-center justify-between mb-2">
+                                    <button onClick={() => onEditTracker(tracker)} className="flex items-center gap-2 hover:bg-white/5 p-0.5 rounded-lg transition-all group">
+                                        <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${tracker.color}20`, color: tracker.color }}>
+                                            <div className="scale-75">{ICON_MAP[tracker.icon]}</div>
+                                        </div>
+                                        <span className="text-[11px] font-bold text-zinc-300 group-hover:text-white">{tracker.name}</span>
+                                    </button>
+                                </div>
+                                <div className="grid grid-cols-7 gap-1">
+                                    {days.map(day => {
+                                        const dateStr = format(day, 'yyyy-MM-dd');
+                                        const isTracked = dateStr in tracker.history;
+                                        const val = tracker.history[dateStr] ?? 0;
+                                        const isCompleted = isTracked && (val >= tracker.goal || val === 0 || tracker.type === 'boolean');
+                                        const isDayToday = isToday(day);
+                                        return (
+                                            <button key={dateStr} onClick={() => onDayClick(tracker, dateStr, val)} className={cn("aspect-square rounded-md transition-all flex flex-col items-center justify-center relative", isDayToday ? "ring-2 ring-white/40 shadow-[0_0_10px_rgba(255,255,255,0.1)]" : "hover:ring-1 hover:ring-white/10")} style={{ backgroundColor: getTrackerColor(tracker, val, isTracked) }}>
+                                                <div className={cn("text-[5px] font-bold uppercase opacity-50", isCompleted ? "text-black" : "text-zinc-400")}>{format(day, 'EEE').charAt(0)}</div>
+                                                <span className={cn("text-[7px] font-bold", isCompleted ? "text-black/40" : "text-zinc-600")}>{format(day, 'd')}</span>
+                                                {val > 0 && <span className={cn("text-[8px] font-black leading-none mt-0.5", isCompleted ? "text-black" : "text-white")}>{tracker.type === 'options' && tracker.options ? tracker.options.find(o => o.value === val)?.label.charAt(0).toUpperCase() : (val % 1 === 0 ? val : val.toFixed(1))}</span>}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Main App ---
+
+        function App() {
+            const [trackers, setTrackers] = useState(() => { const saved = localStorage.getItem('momentum_trackers'); return saved ? JSON.parse(saved) : INITIAL_TRACKERS; });
+            const [gasUrl, setGasUrl] = useState(() => localStorage.getItem('momentum_gas_url') || '');
+            const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+            const [editingTracker, setEditingTracker] = useState(null);
+            const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+            const [activeTab, setActiveTab] = useState('today');
+            const [selectedTrackerId, setSelectedTrackerId] = useState(null);
+            const [currentMonth, setCurrentMonth] = useState(new Date());
+            const [isSyncing, setIsSyncing] = useState(false);
+            const [editingDay, setEditingDay] = useState(null);
+            const [editValue, setEditValue] = useState('');
+
+            useEffect(() => { localStorage.setItem('momentum_trackers', JSON.stringify(trackers)); }, [trackers]);
+            useEffect(() => { localStorage.setItem('momentum_gas_url', gasUrl); }, [gasUrl]);
+
+            const updateTrackerHistory = (id, dateStr, val) => {
+                setTrackers(prev => prev.map(t => {
+                    if (t.id === id) {
+                        const newHistory = { ...t.history };
+                        if (val === null) delete newHistory[dateStr]; else newHistory[dateStr] = val;
+                        const isTodayDate = format(new Date(), 'yyyy-MM-dd') === dateStr;
+                        return { ...t, current: isTodayDate ? (val ?? 0) : t.current, history: newHistory };
+                    }
+                    return t;
+                }));
+            };
+
+            const saveEdit = () => {
+                if (editingDay) {
+                    if (editValue === '') updateTrackerHistory(editingDay.trackerId, editingDay.dateStr, null);
+                    else { const val = parseFloat(editValue); updateTrackerHistory(editingDay.trackerId, editingDay.dateStr, isNaN(val) ? 0 : val); }
+                    setEditingDay(null);
+                }
+            };
+
+            const addTracker = (newTracker) => {
+                const tracker = { ...newTracker, id: Math.random().toString(36).substr(2, 9), history: {}, streak: 0 };
+                setTrackers(prev => [...prev, tracker]);
+            };
+
+            const editTracker = (updatedData) => {
+                if (!editingTracker) return;
+                if (updatedData.name === 'DELETE_TRACKER') { setTrackers(prev => prev.filter(t => t.id !== editingTracker.id)); setEditingTracker(null); return; }
+                setTrackers(prev => prev.map(t => t.id === editingTracker.id ? { ...t, ...updatedData } : t));
+                setEditingTracker(null);
+            };
+
+            const todayStr = format(new Date(), 'yyyy-MM-dd');
+            const statsData = useMemo(() => trackers.map(t => {
+                const isTracked = todayStr in t.history;
+                const val = t.history[todayStr] ?? 0;
+                const isCompleted = isTracked && (val >= t.goal || val === 0 || t.type === 'boolean');
+                return { subject: t.name, A: isCompleted ? 100 : Math.min((val / t.goal) * 100, 100), fullMark: 100, color: t.color };
+            }), [trackers, todayStr]);
+
+            return (
+                <div className="min-h-screen bg-[#0A0B0D] text-white font-sans pb-32">
+                    <header className="p-4 flex items-center justify-between sticky top-0 bg-[#0A0B0D]/80 backdrop-blur-md z-40 border-b border-white/5">
+                        <div>
+                            <div className="text-[9px] text-zinc-500 uppercase tracking-[0.2em] font-semibold mb-0.5">{format(new Date(), 'EEEE, d MMMM')}</div>
+                            <h1 className="text-xl font-bold tracking-tight">Momentum</h1>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => setIsSettingsOpen(true)} className="p-1.5 hover:bg-white/5 rounded-full text-zinc-400"><Icons.Settings /></button>
+                            <button onClick={() => { if (confirm('Reset all data?')) { setTrackers(INITIAL_TRACKERS); localStorage.removeItem('momentum_trackers'); } }} className="p-1.5 hover:bg-white/5 rounded-full text-zinc-600 hover:text-red-400"><Icons.RotateCcw /></button>
+                        </div>
+                    </header>
+
+                    <main className="px-4 mt-2">
+                        <div className="flex gap-5 mb-3">
+                            {['today', 'stats', 'calendar'].map(tab => (
+                                <button key={tab} onClick={() => setActiveTab(tab)} className={cn("text-sm font-semibold transition-all relative py-2 capitalize", activeTab === tab ? "text-white" : "text-zinc-500")}>
+                                    {tab}
+                                    {activeTab === tab && <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 right-0 h-0.5 bg-white rounded-full" />}
+                                </button>
+                            ))}
+                        </div>
+
+                        <AnimatePresence mode="wait">
+                            {activeTab === 'today' ? (
+                                <motion.div key="today" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-2">
+                                    <MonthlyMatrix trackers={trackers} currentMonth={currentMonth} keyPrefix="today" onDayClick={(tracker, dateStr, val) => { setEditingDay({ trackerId: tracker.id, dateStr, name: tracker.name }); setEditValue(val.toString()); }} onEditTracker={setEditingTracker} onMonthChange={setCurrentMonth} />
+                                </motion.div>
+                            ) : activeTab === 'stats' ? (
+                                <motion.div key="stats" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+                                    <div className="bg-[#151619] rounded-3xl p-6 border border-white/5">
+                                        <div className="flex items-center justify-between mb-8">
+                                            <h3 className="text-sm font-semibold flex items-center gap-2"><Icons.TrendingUp /> Habit Balance</h3>
+                                        </div>
+                                        <div className="h-64 w-full">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <RadarChart cx="50%" cy="50%" outerRadius="80%" data={statsData}>
+                                                    <PolarGrid stroke="rgba(255,255,255,0.05)" />
+                                                    <PolarAngleAxis dataKey="subject" tick={{ fill: '#71717a', fontSize: 10, fontWeight: 500 }} />
+                                                    <Radar name="Progress" dataKey="A" stroke="#fff" fill="#fff" fillOpacity={0.05} />
+                                                </RadarChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </div>
+                                    <MonthlyMatrix trackers={trackers} currentMonth={currentMonth} keyPrefix="stats" onDayClick={(tracker, dateStr, val) => { setEditingDay({ trackerId: tracker.id, dateStr, name: tracker.name }); setEditValue(val.toString()); }} onEditTracker={setEditingTracker} onMonthChange={setCurrentMonth} />
+                                </motion.div>
+                            ) : (
+                                <motion.div key="calendar" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+                                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                                        {trackers.map(t => (
+                                            <button key={t.id} onClick={() => setSelectedTrackerId(t.id)} className={cn("px-4 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all border", selectedTrackerId === t.id ? "bg-white text-black border-white" : "bg-white/5 text-zinc-500 border-white/5 hover:bg-white/10")}>{t.name}</button>
+                                        ))}
+                                    </div>
+                                    {selectedTrackerId ? <MonthlyCalendar tracker={trackers.find(t => t.id === selectedTrackerId)} currentMonth={currentMonth} onMonthChange={setCurrentMonth} onUpdateHistory={updateTrackerHistory} /> : <div className="bg-[#151619] rounded-3xl p-12 border border-white/5 text-center"><Icons.Calendar /><p className="text-zinc-500 text-sm mt-4">Select a habit to view monthly history</p></div>}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </main>
+
+                    <nav className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[#0A0B0D] via-[#0A0B0D] to-transparent pointer-events-none z-50">
+                        <div className="max-w-md mx-auto flex justify-center pointer-events-auto">
+                            <div className="bg-[#151619]/90 backdrop-blur-2xl border border-white/10 rounded-full p-2 flex items-center gap-1 shadow-2xl">
+                                <button onClick={() => setActiveTab('today')} className={cn("w-14 h-14 rounded-full flex items-center justify-center transition-all", activeTab === 'today' ? "bg-white text-black shadow-lg" : "text-zinc-500 hover:text-white")}><Icons.Check /></button>
+                                <button onClick={() => setActiveTab('stats')} className={cn("w-14 h-14 rounded-full flex items-center justify-center transition-all", activeTab === 'stats' ? "bg-white text-black shadow-lg" : "text-zinc-500 hover:text-white")}><Icons.TrendingUp /></button>
+                                <button onClick={() => setActiveTab('calendar')} className={cn("w-14 h-14 rounded-full flex items-center justify-center transition-all", activeTab === 'calendar' ? "bg-white text-black shadow-lg" : "text-zinc-500 hover:text-white")}><Icons.Calendar /></button>
+                                <div className="w-px h-8 bg-white/10 mx-2" />
+                                <button onClick={() => setIsAddModalOpen(true)} className="w-14 h-14 rounded-full bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20 active:scale-95"><Icons.Plus /></button>
+                            </div>
+                        </div>
+                    </nav>
+
+                    <AnimatePresence>
+                        <TrackerModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} onSave={addTracker} />
+                        <TrackerModal isOpen={!!editingTracker} onClose={() => setEditingTracker(null)} onSave={editTracker} initialData={editingTracker || undefined} isEdit />
+                        {editingDay && (
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-[#151619] w-full max-w-xs rounded-3xl p-6 border border-white/10 shadow-2xl">
+                                    <h3 className="text-sm font-semibold mb-4 text-white">Edit {editingDay.name} - {format(new Date(editingDay.dateStr), 'MMM d')}</h3>
+                                    <div className="space-y-4">
+                                        <div className="flex gap-2">
+                                            <input type="number" step="0.1" autoFocus placeholder="Enter value..." value={editValue} onChange={(e) => setEditValue(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && saveEdit()} className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-white/20" />
+                                            <button onClick={() => { setEditValue(''); updateTrackerHistory(editingDay.trackerId, editingDay.dateStr, null); setEditingDay(null); }} className="px-4 bg-white/5 border border-white/10 rounded-xl text-red-500 hover:bg-red-500/10 transition-all"><Icons.X /></button>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => setEditingDay(null)} className="flex-1 py-3 rounded-xl bg-white/5 text-zinc-400 text-xs font-semibold">Cancel</button>
+                                            <button onClick={saveEdit} className="flex-1 py-3 rounded-xl bg-white text-black text-xs font-bold">Save</button>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
