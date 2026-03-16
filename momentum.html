@@ -53,6 +53,13 @@
         // Check for required dependencies
         const dateFns = window.dateFns || window.date_fns || (window.DateFns);
         const Recharts = window.Recharts;
+        console.log('Dependencies check:', { 
+            React: !!window.React, 
+            ReactDOM: !!window.ReactDOM, 
+            dateFns: !!dateFns, 
+            Recharts: !!Recharts,
+            Motion: !!(window.Motion || window.framerMotion)
+        });
         
         const missingDeps = [];
         if (!window.React) missingDeps.push('React');
@@ -68,12 +75,13 @@
                 <p style="opacity: 0.6; font-size: 14px; max-width: 300px; margin-bottom: 32px;">This usually happens due to a poor internet connection or CDN issues. Please try reloading.</p>
                 <div style="display: flex; gap: 12px;">
                     <button onclick="location.reload();" style="background: white; color: black; border: none; padding: 12px 24px; border-radius: 12px; cursor: pointer; font-weight: bold; transition: transform 0.2s active:scale-95;">Reload Page</button>
-                    <button onclick="if(confirm('Reset all data?')){ localStorage.clear(); location.reload(); }" style="background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 12px 24px; border-radius: 12px; cursor: pointer; font-weight: bold;">Reset App</button>
+                    <button onclick="if(confirm('Reset all data? This might fix loading issues if data is corrupted.')){ localStorage.clear(); location.reload(); }" style="background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 12px 24px; border-radius: 12px; cursor: pointer; font-weight: bold;">Reset App</button>
                 </div>
             </div>`;
             throw new Error('Missing dependencies: ' + missingDeps.join(', '));
         }
 
+        // Robust check for Motion
         const Motion = window.Motion || window.framerMotion || { motion: (props) => <div {...props} />, AnimatePresence: ({children}) => children };
         const { motion, AnimatePresence } = Motion;
 
@@ -88,6 +96,7 @@
             subMonths, isSameMonth, isToday 
         } = dateFns;
 
+        // --- Icons (SVG Paths) ---
         const Icons = {
             Plus: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,
             Settings: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>,
@@ -105,8 +114,14 @@
             X: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>,
             RotateCcw: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>,
             Cloud: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.5 19c3.037 0 5.5-2.463 5.5-5.5 0-2.97-2.354-5.382-5.29-5.49A7.001 7.001 0 0 0 4 10.5c0 .34.025.67.073 1A4.5 4.5 0 0 0 5.5 20h12"/><path d="M12 13v6"/><path d="m9 16 3 3 3-3"/></svg>,
+            AlertCircle: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>,
+            Play: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>,
+            Pause: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>,
+            Share2: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>,
+            ExternalLink: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>,
         };
 
+        // --- Utils ---
         function cn(...inputs) {
             return inputs.filter(Boolean).join(' ');
         }
@@ -138,10 +153,12 @@
         const COLORS = ['#F27D26', '#00FF00', '#FF4444', '#3B82F6', '#A855F7', '#EC4899'];
 
         const INITIAL_TRACKERS = [
-            { id: '1', name: 'Pushups', icon: 'pushup', type: 'counter', goal: 20, current: 0, color: '#A855F7', streak: 0, history: {} },
-            { id: '2', name: 'Drink Water', icon: 'water', type: 'boolean', goal: 1, current: 0, color: '#3B82F6', streak: 0, history: {} },
-            { id: '3', name: 'Reading', icon: 'read', type: 'timer', goal: 600, current: 0, color: '#EC4899', streak: 0, history: {} },
+            { id: '1', name: 'Pushups', icon: 'pushup', type: 'counter', goal: 20, current: 12, color: '#A855F7', streak: 5, history: {} },
+            { id: '2', name: 'Drink Water', icon: 'water', type: 'boolean', goal: 1, current: 1, color: '#3B82F6', streak: 12, history: {} },
+            { id: '3', name: 'Reading', icon: 'read', type: 'timer', goal: 600, current: 0, color: '#EC4899', streak: 3, history: {} },
         ];
+
+        // --- Components ---
 
         const TrackerModal = ({ isOpen, onClose, onSave, initialData, isEdit = false }) => {
             const [name, setName] = useState(initialData?.name || '');
@@ -366,16 +383,20 @@
             );
         };
 
+        // --- Main App ---
+
         function App() {
             const [trackers, setTrackers] = useState(() => { 
                 try {
                     const saved = localStorage.getItem('momentum_trackers'); 
                     const parsed = saved ? JSON.parse(saved) : INITIAL_TRACKERS;
+                    // Ensure every tracker has a unique ID to prevent key collisions
                     return parsed.map((t, i) => ({ 
                         ...t, 
                         id: t.id || `t-${i}-${Math.random().toString(36).substr(2, 5)}` 
                     }));
                 } catch (e) {
+                    console.error("Failed to load trackers from localStorage", e);
                     return INITIAL_TRACKERS;
                 }
             });
@@ -392,6 +413,69 @@
 
             useEffect(() => { localStorage.setItem('momentum_trackers', JSON.stringify(trackers)); }, [trackers]);
             useEffect(() => { localStorage.setItem('momentum_gas_url', gasUrl); }, [gasUrl]);
+
+            // Auto-sync effect
+            useEffect(() => {
+                if (!gasUrl || isSyncing) return;
+                const timer = setTimeout(() => {
+                    const sync = async () => {
+                        try {
+                            await fetch(gasUrl, {
+                                method: 'POST',
+                                mode: 'no-cors',
+                                headers: { 'Content-Type': 'text/plain' },
+                                body: JSON.stringify({ trackers }),
+                            });
+                        } catch (err) {
+                            console.error('Auto-sync failed', err);
+                        }
+                    };
+                    sync();
+                }, 3000);
+                return () => clearTimeout(timer);
+            }, [trackers, gasUrl]);
+
+            const handleSync = async () => {
+                if (!gasUrl) { setIsSettingsOpen(true); return; }
+                setIsSyncing(true);
+                try {
+                    if (!gasUrl.includes('/exec')) {
+                        alert('Invalid URL! Make sure it ends with /exec (from New Deployment).');
+                        setIsSyncing(false);
+                        return;
+                    }
+                    await fetch(gasUrl, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ trackers }),
+                    });
+                    alert('Sync signal sent! Data will appear in your Google Sheet shortly.');
+                } catch (err) {
+                    console.error(err);
+                    alert('Sync failed. Check console.');
+                } finally {
+                    setIsSyncing(false);
+                }
+            };
+
+            const handleLoad = async () => {
+                if (!gasUrl) { setIsSettingsOpen(true); return; }
+                setIsSyncing(true);
+                try {
+                    const response = await fetch(`${gasUrl}?action=get`);
+                    const data = await response.json();
+                    if (data.trackers) {
+                        setTrackers(data.trackers);
+                        alert('Data loaded from Google Sheets!');
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert('Load failed. Make sure your script supports GET and handles CORS.');
+                } finally {
+                    setIsSyncing(false);
+                }
+            };
 
             const updateTrackerHistory = (id, dateStr, val) => {
                 setTrackers(prev => prev.map(t => {
@@ -430,6 +514,7 @@
                 const isTracked = todayStr in t.history;
                 const val = t.history[todayStr] ?? 0;
                 const isCompleted = isTracked && (val >= t.goal || val === 0 || t.type === 'boolean');
+                // Use a unique subject by appending ID and index to avoid duplicate keys in Recharts
                 return { 
                     subject: `${t.name}#${t.id}#${i}`, 
                     displayName: t.name, 
@@ -449,6 +534,23 @@
                         </div>
                         <div className="flex items-center gap-2">
                             <button onClick={() => setIsSettingsOpen(true)} className="p-1.5 hover:bg-white/5 rounded-full text-zinc-400"><Icons.Settings /></button>
+                            <button 
+                                onClick={handleSync}
+                                disabled={isSyncing}
+                                className={cn(
+                                    "flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-all border",
+                                    isSyncing 
+                                        ? "bg-indigo-500/10 border-indigo-500/20 text-indigo-500" 
+                                        : gasUrl 
+                                            ? "bg-white/5 border-white/10 text-zinc-400 hover:text-indigo-400 hover:border-indigo-400/30"
+                                            : "bg-white/5 border-white/5 text-zinc-600 hover:text-zinc-400"
+                                )}
+                            >
+                                <Icons.Cloud />
+                                <span className="text-[9px] font-bold uppercase tracking-widest">
+                                    {isSyncing ? "Syncing..." : gasUrl ? "Sync" : "Setup"}
+                                </span>
+                            </button>
                             <button onClick={() => { if (confirm('Reset all data?')) { setTrackers(INITIAL_TRACKERS); localStorage.removeItem('momentum_trackers'); } }} className="p-1.5 hover:bg-white/5 rounded-full text-zinc-600 hover:text-red-400"><Icons.RotateCcw /></button>
                         </div>
                     </header>
@@ -485,14 +587,22 @@
                                         </div>
                                     </div>
                                     <div className="bg-[#151619] rounded-3xl p-6 border border-white/5">
-                                        <h3 className="text-sm font-semibold mb-6 flex items-center gap-2"><Icons.Calendar /> Weekly Activity</h3>
+                                        <h3 className="text-sm font-semibold mb-6 flex items-center gap-2">
+                                            <Icons.Calendar /> Weekly Activity
+                                        </h3>
                                         <div className="h-48 w-full">
                                             <ResponsiveContainer width="100%" height="100%">
                                                 <BarChart data={trackers}>
                                                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#71717a', fontSize: 10 }} />
-                                                    <Tooltip cursor={{ fill: 'rgba(255,255,255,0.02)' }} contentStyle={{ backgroundColor: '#151619', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', fontSize: '12px' }} itemStyle={{ color: '#fff' }} />
+                                                    <Tooltip 
+                                                        cursor={{ fill: 'rgba(255,255,255,0.02)' }}
+                                                        contentStyle={{ backgroundColor: '#151619', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', fontSize: '12px' }}
+                                                        itemStyle={{ color: '#fff' }}
+                                                    />
                                                     <Bar dataKey="current" radius={[6, 6, 0, 0]} barSize={32}>
-                                                        {trackers.map((entry, i) => <Cell key={`cell-${entry.id}-${i}`} fill={entry.color} />)}
+                                                        {trackers.map((entry, i) => (
+                                                            <Cell key={`cell-${entry.id}-${i}`} fill={entry.color} />
+                                                        ))}
                                                     </Bar>
                                                 </BarChart>
                                             </ResponsiveContainer>
@@ -533,15 +643,45 @@
                             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
                                 <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-[#151619] w-full max-w-md rounded-3xl p-6 border border-white/10">
                                     <div className="flex justify-between items-center mb-6">
-                                        <h2 className="text-xl font-semibold text-white">Settings</h2>
+                                        <h2 className="text-xl font-semibold text-white">Cloud Settings</h2>
                                         <button onClick={() => setIsSettingsOpen(false)} className="p-2 hover:bg-white/5 rounded-full text-zinc-400"><Icons.X /></button>
                                     </div>
-                                    <div className="space-y-6">
+                                    <div className="space-y-6 max-h-[70vh] overflow-y-auto scrollbar-hide">
                                         <div>
-                                            <label className="text-[10px] uppercase tracking-widest text-zinc-500 mb-2 block">Apps Script URL</label>
+                                            <label className="text-[10px] uppercase tracking-widest text-zinc-500 mb-2 block">Apps Script Web App URL</label>
                                             <input type="text" value={gasUrl} onChange={(e) => setGasUrl(e.target.value)} placeholder="https://script.google.com/macros/s/.../exec" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-xs focus:outline-none focus:border-white/20" />
                                         </div>
-                                        <p className="text-[10px] text-zinc-500 leading-relaxed">Enter your Google Apps Script URL to sync data with Google Sheets.</p>
+                                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                                            <h3 className="text-xs font-semibold mb-2 text-indigo-400">Apps Script Setup</h3>
+                                            <div className="text-[10px] text-zinc-400 space-y-2 leading-relaxed">
+                                                <p>1. Open your Google Sheet.</p>
+                                                <p>2. Extensions > Apps Script.</p>
+                                                <p>3. Paste the code below.</p>
+                                                <p>4. Deploy > New Deployment > Web App.</p>
+                                                <p>5. Access: Anyone.</p>
+                                            </div>
+                                            <div className="bg-black/40 p-3 rounded-lg mt-3">
+                                                <pre className="text-[9px] text-zinc-500 font-mono overflow-x-auto max-h-40">
+{`function doPost(e) {
+  var data = JSON.parse(e.postData.contents);
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("MomentumData") || ss.insertSheet("MomentumData");
+  sheet.clear();
+  sheet.appendRow(["Date", "Habit", "Value", "Goal"]);
+  data.trackers.forEach(function(t) {
+    Object.keys(t.history).forEach(function(d) {
+      sheet.appendRow([d, t.name, t.history[d], t.goal]);
+    });
+  });
+  return ContentService.createTextOutput(JSON.stringify({success:true})).setMimeType(ContentService.MimeType.JSON);
+}`}
+                                                </pre>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-3">
+                                            <button onClick={handleSync} className="flex-1 bg-indigo-600 text-white font-semibold py-3 rounded-xl hover:bg-indigo-500 transition-all">Sync Now</button>
+                                            <button onClick={handleLoad} className="flex-1 bg-white/5 text-white font-semibold py-3 rounded-xl hover:bg-white/10 transition-all">Load Data</button>
+                                        </div>
                                     </div>
                                 </motion.div>
                             </motion.div>
@@ -553,7 +693,7 @@
                                     <h3 className="text-sm font-semibold mb-4 text-white">Edit {editingDay.name} - {format(new Date(editingDay.dateStr), 'MMM d')}</h3>
                                     <div className="space-y-4">
                                         <div className="flex gap-2">
-                                            <input type="number" step="0.1" autoFocus placeholder="Value..." value={editValue} onChange={(e) => setEditValue(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && saveEdit()} className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-white/20" />
+                                            <input type="number" step="0.1" autoFocus placeholder="Enter value..." value={editValue} onChange={(e) => setEditValue(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && saveEdit()} className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-white/20" />
                                             <button onClick={() => { setEditValue(''); updateTrackerHistory(editingDay.trackerId, editingDay.dateStr, null); setEditingDay(null); }} className="px-4 bg-white/5 border border-white/10 rounded-xl text-red-500 hover:bg-red-500/10 transition-all"><Icons.X /></button>
                                         </div>
                                         <div className="flex gap-2">
@@ -569,8 +709,18 @@
             );
         }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        try {
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(<App />);
+        } catch (e) {
+            console.error("Failed to render App", e);
+            document.getElementById('root').innerHTML = `<div style="padding: 20px; color: white; font-family: sans-serif;">
+                <h1 style="color: #FF4444;">Error Loading App</h1>
+                <p>Something went wrong while starting the application.</p>
+                <pre style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; font-size: 12px; overflow: auto;">${e.message}</pre>
+                <button onclick="localStorage.clear(); location.reload();" style="background: white; color: black; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px;">Reset Data & Reload</button>
+            </div>`;
+        }
     </script>
 </body>
 </html>
